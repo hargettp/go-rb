@@ -1,0 +1,9 @@
+.emacs.desktop*
+.project
+.classpath
+*~
+/bin
+.settings/*
+/pkg
+.DS_Store
+*.sublime-workspace
