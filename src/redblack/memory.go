@@ -1,5 +1,7 @@
 package redblack
 
+import "fmt"
+
 type memoryLLRB struct {
 	root *memoryNode
 }
@@ -11,32 +13,51 @@ type memoryNode struct {
 	color       Color
 }
 
-// node implementation
+// Node implementation
 
-func (h *memoryNode) getKey() Key {
+func (h *memoryNode) Key() Key {
 	return h.key
 }
 
-func (h *memoryNode) getValue() Value {
+func (h *memoryNode) Value() Value {
 	return h.value
 }
 
-func (h *memoryNode) isRed() bool {
+func (h *memoryNode) IsRed() bool {
+	if h == nil {
+		return false
+	}
 	return h.color == RED
 }
 
-func (h *memoryNode) leftChild() node {
+func (h *memoryNode) Left() Node {
 	return h.left
 }
 
-func (h *memoryNode) rightChild() node {
+func (h *memoryNode) Right() Node {
 	return h.right
 }
 
-func (h *memoryNode) flipColors() {
+func (h *memoryNode) FlipColors() {
 	h.color = !h.color
 	h.left.color = !h.left.color
 	h.right.color = !h.right.color
+}
+
+func (h *memoryNode) String() string {
+	var leftKey, rightKey Key
+	if h.left != nil {
+		leftKey = h.left.key
+	} else {
+		leftKey = nil
+	}
+	if h.right != nil {
+		rightKey = h.right.key
+	} else {
+		rightKey = nil
+	}
+	return fmt.Sprintf("key=%v,left={%v},right={%v},color=%v,value=%v",
+		h.key, leftKey, rightKey, h.color, h.value)
 }
 
 // LLRB implementation
@@ -49,7 +70,8 @@ func (tree *memoryLLRB) Search(key Key) Value {
 	x := tree.root
 	// NOTE this is a check for the sentinel
 	for x != nil {
-		cmp := key.CompareTo(x.key)
+		// cmp := key.CompareTo(x.key)
+		cmp := key.Compare(x.key)
 		if cmp == 0 {
 			return x.value
 		} else if cmp < 0 {
@@ -63,6 +85,7 @@ func (tree *memoryLLRB) Search(key Key) Value {
 
 func (tree *memoryLLRB) Insert(key Key, value Value) {
 	tree.root = tree.insert(tree.root, key, value)
+	tree.root.color = BLACK
 }
 
 func (tree *memoryLLRB) Delete(key Key) {
@@ -75,6 +98,28 @@ func (tree *memoryLLRB) DeleteMin() {
 	tree.root.color = BLACK
 }
 
+func (tree *memoryLLRB) String() string {
+	var visit func(h *memoryNode, nix int) string
+	visit = func(h *memoryNode, nix int) string {
+		if h == nil {
+			return ""
+		}
+		var lix, rix int
+		if h.left != nil {
+			lix = nix + 1
+		}
+		if h.right != nil {
+			rix = nix + 2
+		}
+		s := fmt.Sprintf("#%v: key=%v,color=%v,left=#%v,right=#%v,value=%v\n",
+			nix, h.key, h.color, lix, rix, h.value)
+		s += visit(h.left, lix)
+		s += visit(h.right, rix)
+		return s
+	}
+	return visit(tree.root, 1)
+}
+
 // LLRB internals
 
 func (tree *memoryLLRB) insert(h *memoryNode, key Key, value Value) *memoryNode {
@@ -82,10 +127,10 @@ func (tree *memoryLLRB) insert(h *memoryNode, key Key, value Value) *memoryNode 
 	if h == nil {
 		return &memoryNode{key: key, value: value, color: RED}
 	}
-	if h.left.isRed() && h.right.isRed() {
-		h.flipColors()
+	if h.left.IsRed() && h.right.IsRed() {
+		h.FlipColors()
 	}
-	cmp := key.CompareTo(h.key)
+	cmp := key.Compare(h.key)
 	if cmp == 0 {
 		h.value = value
 	} else if cmp < 0 {
@@ -93,13 +138,13 @@ func (tree *memoryLLRB) insert(h *memoryNode, key Key, value Value) *memoryNode 
 	} else if cmp > 0 {
 		h.right = tree.insert(h.right, key, value)
 	}
-	if h.right.isRed() && !h.left.isRed() {
+	if h.right.IsRed() && !h.left.IsRed() {
 		h = tree.rotateLeft(h)
 	}
-	if h.left.isRed() && h.left.left.isRed() {
+	if h.left.IsRed() && h.left.left.IsRed() {
 		h = tree.rotateRight(h)
 	}
-	return nil
+	return h
 }
 
 func (tree *memoryLLRB) rotateLeft(h *memoryNode) *memoryNode {
@@ -125,29 +170,29 @@ func (tree *memoryLLRB) delete(h *memoryNode, key Key) *memoryNode {
 }
 
 func (tree *memoryLLRB) moveRedLeft(h *memoryNode) *memoryNode {
-	h.flipColors()
-	if h.right.left.isRed() {
+	h.FlipColors()
+	if h.right.left.IsRed() {
 		h.right = tree.rotateRight(h.right)
 		h = tree.rotateLeft(h)
-		h.flipColors()
+		h.FlipColors()
 	}
 	return h
 }
 
 func (tree *memoryLLRB) moveRedRight(h *memoryNode) *memoryNode {
-	h.flipColors()
-	if h.left.left.isRed() {
+	h.FlipColors()
+	if h.left.left.IsRed() {
 		h = tree.rotateRight(h)
-		h.flipColors()
+		h.FlipColors()
 	}
 	return h
 }
 
 func (tree *memoryLLRB) fixUp(h *memoryNode) *memoryNode {
-	if h.right.isRed() && !h.left.isRed() {
+	if h.right.IsRed() && !h.left.IsRed() {
 		h = tree.rotateLeft(h)
 	}
-	if h.left.isRed() && h.left.left.isRed() {
+	if h.left.IsRed() && h.left.left.IsRed() {
 		h = tree.rotateRight(h)
 	}
 	return h
@@ -158,7 +203,7 @@ func (tree *memoryLLRB) deleteMin(h *memoryNode) *memoryNode {
 	if h.left == nil {
 		return nil
 	}
-	if !h.left.isRed() && !h.left.left.isRed() {
+	if !h.left.IsRed() && !h.left.left.IsRed() {
 		h = tree.moveRedLeft(h)
 	}
 	h.left = tree.deleteMin(h.left)
