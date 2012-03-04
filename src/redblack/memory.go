@@ -31,10 +31,16 @@ func (h *memoryNode) IsRed() bool {
 }
 
 func (h *memoryNode) Left() Node {
+	if h == nil {
+		return nil
+	}
 	return h.left
 }
 
 func (h *memoryNode) Right() Node {
+	if h == nil {
+		return nil
+	}
 	return h.right
 }
 
@@ -96,6 +102,17 @@ func (tree *memoryLLRB) Delete(key Key) {
 func (tree *memoryLLRB) DeleteMin() {
 	tree.root = tree.deleteMin(tree.root)
 	tree.root.color = BLACK
+}
+
+func (tree *memoryLLRB) Size() int {
+	var count func(h Node) int
+	count = func(h Node) int {
+		if h != nil {
+			return 1 + count(h.Left()) + count(h.Right())
+		}
+		return 0
+	}
+	return count(tree.root)
 }
 
 func (tree *memoryLLRB) String() string {

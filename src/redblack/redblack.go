@@ -24,6 +24,7 @@ type LLRB interface {
 	Insert(key Key, value Value)
 	Delete(key Key)
 	DeleteMin()
+	Size() int
 	String() string
 }
 

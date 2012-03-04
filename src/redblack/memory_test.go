@@ -1,5 +1,6 @@
 package redblack
 
+import "math"
 import "testing"
 
 import l4g "code.google.com/p/log4go"
@@ -95,7 +96,8 @@ func checkInvariants(tree *memoryLLRB) bool {
 	return checkBlackRoot(tree) &&
 		checkAllLeavesBlack(tree) &&
 		checkAllPathsSameNumberBlack(tree) &&
-		checkChildrenOfRedAreBlack(tree)
+		checkChildrenOfRedAreBlack(tree) &&
+		checkDepth(tree)
 }
 
 func checkBlackRoot(tree *memoryLLRB) bool {
@@ -167,6 +169,22 @@ func checkChildrenOfRedAreBlack(tree *memoryLLRB) bool {
 	}
 	return true
 }
+
+func checkDepth(tree *memoryLLRB) bool {
+	// verify that the depth is as expected (e.g., <= log2(N) )
+	size := tree.Size()
+	maxDepth := int(math.Ceil(math.Log2(float64(size))))
+	var depth func(h Node, d int) int
+	depth = func(h Node, d int) int {
+		if h == nil {
+			return 0
+		}
+		return int(math.Max(float64(depth(h.Left(), d+1)), float64(depth(h.Right(), d+1))))
+	}
+	return depth(tree.root, 0) <= maxDepth
+}
+
+// Useful visitor routines
 
 func visitNodes(b *memoryNode, visit func(h *memoryNode)) {
 	if b != nil {
