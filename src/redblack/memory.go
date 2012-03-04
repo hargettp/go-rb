@@ -23,6 +23,10 @@ func (h *memoryNode) Value() Value {
 	return h.value
 }
 
+func (h *memoryNode) SetValue(value Value) {
+	h.value = value
+}
+
 func (h *memoryNode) IsRed() bool {
 	if h == nil {
 		return false
@@ -37,11 +41,19 @@ func (h *memoryNode) Left() Node {
 	return h.left
 }
 
+func (n *memoryNode) SetLeft(h Node) {
+	n.left = h.(*memoryNode)
+}
+
 func (h *memoryNode) Right() Node {
 	if h == nil {
 		return nil
 	}
 	return h.right
+}
+
+func (n *memoryNode) SetRight(h Node) {
+	n.right = h.(*memoryNode)
 }
 
 func (h *memoryNode) FlipColors() {
@@ -51,6 +63,9 @@ func (h *memoryNode) FlipColors() {
 }
 
 func (h *memoryNode) Color() Color {
+	if h == nil {
+		return BLACK
+	}
 	return h.color
 }
 
@@ -80,36 +95,40 @@ func NewMemoryLLRB() LLRB {
 	return &memoryLLRB{root: nil}
 }
 
+func (tree *memoryLLRB) NewNode(key Key, value Value) Node {
+	return &memoryNode{key: key, value: value, color: RED}
+}
+
 func (tree *memoryLLRB) Search(key Key) Value {
-	x := tree.root
+	x := tree.Root()
 	// NOTE this is a check for the sentinel
 	for x != nil {
 		// cmp := key.CompareTo(x.key)
-		cmp := key.Compare(x.key)
+		cmp := key.Compare(x.Key())
 		if cmp == 0 {
-			return x.value
+			return x.Value()
 		} else if cmp < 0 {
-			x = x.left
+			x = x.Left()
 		} else if cmp > 0 {
-			x = x.right
+			x = x.Right()
 		}
 	}
 	return nil
 }
 
 func (tree *memoryLLRB) Insert(key Key, value Value) {
-	tree.root = tree.insert(tree.root, key, value)
-	tree.root.SetColor(BLACK)
+	tree.SetRoot(tree.insert(tree.root, key, value))
+	tree.Root().SetColor(BLACK)
 }
 
 func (tree *memoryLLRB) Delete(key Key) {
-	tree.root = tree.delete(tree.root, key)
-	tree.root.SetColor(BLACK)
+	tree.SetRoot(tree.delete(tree.root, key))
+	tree.Root().SetColor(BLACK)
 }
 
 func (tree *memoryLLRB) DeleteMin() {
-	tree.root = tree.deleteMin(tree.root)
-	tree.root.SetColor(BLACK)
+	tree.SetRoot(tree.deleteMin(tree.root))
+	tree.Root().SetColor(BLACK)
 }
 
 func (tree *memoryLLRB) Size() int {
@@ -120,7 +139,15 @@ func (tree *memoryLLRB) Size() int {
 		}
 		return 0
 	}
-	return count(tree.root)
+	return count(tree.Root())
+}
+
+func (tree *memoryLLRB) Root() Node {
+	return tree.root
+}
+
+func (tree *memoryLLRB) SetRoot(h Node) {
+	tree.root = h.(*memoryNode)
 }
 
 func (tree *memoryLLRB) String() string {
@@ -147,44 +174,44 @@ func (tree *memoryLLRB) String() string {
 
 // LLRB internals
 
-func (tree *memoryLLRB) insert(h *memoryNode, key Key, value Value) *memoryNode {
+func (tree *memoryLLRB) insert(h Node, key Key, value Value) Node {
 	// NOTE this is a check for the sentinel
-	if h == nil {
-		return &memoryNode{key: key, value: value, color: RED}
+	if h.(*memoryNode) == nil {
+		return tree.NewNode(key, value)
 	}
-	if h.left.IsRed() && h.right.IsRed() {
+	if h.Left() != nil && h.Left().IsRed() && h.Right() != nil && h.Right().IsRed() {
 		h.FlipColors()
 	}
-	cmp := key.Compare(h.key)
+	cmp := key.Compare(h.Key())
 	if cmp == 0 {
-		h.value = value
+		h.SetValue(value)
 	} else if cmp < 0 {
-		h.left = tree.insert(h.left, key, value)
+		h.SetLeft(tree.insert(h.Left(), key, value))
 	} else if cmp > 0 {
-		h.right = tree.insert(h.right, key, value)
+		h.SetRight(tree.insert(h.Right(), key, value))
 	}
-	if h.right.IsRed() && !h.left.IsRed() {
+	if h.Right().IsRed() && !h.Left().IsRed() {
 		h = tree.rotateLeft(h)
 	}
-	if h.left.IsRed() && h.left.left.IsRed() {
+	if h.Left().IsRed() && h.Left().Left().IsRed() {
 		h = tree.rotateRight(h)
 	}
 	return h
 }
 
-func (tree *memoryLLRB) rotateLeft(h *memoryNode) *memoryNode {
-	x := h.right
-	h.right = x.left
-	x.left = h
+func (tree *memoryLLRB) rotateLeft(h Node) Node {
+	x := h.Right()
+	h.SetRight(x.Left())
+	x.SetLeft(h)
 	x.SetColor(h.Color())
 	h.SetColor(RED)
 	return x
 }
 
-func (tree *memoryLLRB) rotateRight(h *memoryNode) *memoryNode {
-	x := h.left
-	h.left = x.right
-	x.right = h
+func (tree *memoryLLRB) rotateRight(h Node) Node {
+	x := h.Left()
+	h.SetLeft(x.Right())
+	x.SetRight(h)
 	x.SetColor(h.Color())
 	h.SetColor(RED)
 	return x
@@ -194,43 +221,43 @@ func (tree *memoryLLRB) delete(h *memoryNode, key Key) *memoryNode {
 	return nil
 }
 
-func (tree *memoryLLRB) moveRedLeft(h *memoryNode) *memoryNode {
+func (tree *memoryLLRB) moveRedLeft(h Node) Node {
 	h.FlipColors()
-	if h.right.left.IsRed() {
-		h.right = tree.rotateRight(h.right)
+	if h.Right().Left().IsRed() {
+		h.SetRight(tree.rotateRight(h.Right()))
 		h = tree.rotateLeft(h)
 		h.FlipColors()
 	}
 	return h
 }
 
-func (tree *memoryLLRB) moveRedRight(h *memoryNode) *memoryNode {
+func (tree *memoryLLRB) moveRedRight(h Node) Node {
 	h.FlipColors()
-	if h.left.left.IsRed() {
+	if h.Left().Left().IsRed() {
 		h = tree.rotateRight(h)
 		h.FlipColors()
 	}
 	return h
 }
 
-func (tree *memoryLLRB) fixUp(h *memoryNode) *memoryNode {
-	if h.right.IsRed() && !h.left.IsRed() {
+func (tree *memoryLLRB) fixUp(h Node) Node {
+	if h.Right().IsRed() && !h.Left().IsRed() {
 		h = tree.rotateLeft(h)
 	}
-	if h.left.IsRed() && h.left.left.IsRed() {
+	if h.Left().IsRed() && h.Left().Left().IsRed() {
 		h = tree.rotateRight(h)
 	}
 	return h
 }
 
-func (tree *memoryLLRB) deleteMin(h *memoryNode) *memoryNode {
+func (tree *memoryLLRB) deleteMin(h Node) Node {
 	// NOTE this is a check for the sentinel
-	if h.left == nil {
+	if h.Left() == nil {
 		return nil
 	}
-	if !h.left.IsRed() && !h.left.left.IsRed() {
+	if !h.Left().IsRed() && !h.Left().Left().IsRed() {
 		h = tree.moveRedLeft(h)
 	}
-	h.left = tree.deleteMin(h.left)
+	h.SetLeft(tree.deleteMin(h.Left()))
 	return tree.fixUp(h)
 }

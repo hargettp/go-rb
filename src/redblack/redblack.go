@@ -20,11 +20,14 @@ func (c Color) String() string {
 General red-black tree interface
 */
 type LLRB interface {
+	NewNode(key Key, value Value) Node
 	Search(key Key) Value
 	Insert(key Key, value Value)
 	Delete(key Key)
 	DeleteMin()
 	Size() int
+	Root() Node
+	SetRoot(h Node)
 	String() string
 }
 
@@ -81,9 +84,12 @@ Internal node interface
 type Node interface {
 	Key() Key
 	Value() Value
+	SetValue(value Value)
 	IsRed() bool
 	Left() Node
+	SetLeft(h Node)
 	Right() Node
+	SetRight(h Node)
 	FlipColors()
 	Color() Color
 	SetColor(c Color)
