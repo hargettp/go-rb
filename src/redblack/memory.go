@@ -1,6 +1,7 @@
 package redblack
 
 import "fmt"
+import "strings"
 
 type memoryLLRB struct {
 	root *memoryNode
@@ -151,25 +152,17 @@ func (tree *memoryLLRB) SetRoot(h Node) {
 }
 
 func (tree *memoryLLRB) String() string {
-	var visit func(h *memoryNode, nix int) string
-	visit = func(h *memoryNode, nix int) string {
-		if h == nil {
+	var visit func(h Node, depth int) string
+	visit = func(h Node, depth int) string {
+		if h.(*memoryNode) == nil {
 			return ""
 		}
-		var lix, rix int
-		if h.left != nil {
-			lix = nix + 1
-		}
-		if h.right != nil {
-			rix = nix + 2
-		}
-		s := fmt.Sprintf("#%v: key=%v,color=%v,left=#%v,right=#%v,value=%v\n",
-			nix, h.key, h.Color(), lix, rix, h.value)
-		s += visit(h.left, lix)
-		s += visit(h.right, rix)
+		s := fmt.Sprintf("%v%v\n", strings.Repeat("\t", depth), h)
+		s += visit(h.Left(), depth+1)
+		s += visit(h.Right(), depth+1)
 		return s
 	}
-	return visit(tree.root, 1)
+	return visit(tree.root, 0)
 }
 
 // LLRB internals
