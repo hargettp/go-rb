@@ -134,7 +134,7 @@ func checkAllPathsSameNumberBlack(tree *memoryLLRB) bool {
 		count := 0
 		for _, n := range path {
 			if n != nil {
-				colors = append(colors, n.color)
+				colors = append(colors, n.Color())
 			}
 			if !n.IsRed() {
 				count++

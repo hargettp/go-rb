@@ -85,5 +85,7 @@ type Node interface {
 	Left() Node
 	Right() Node
 	FlipColors()
+	Color() Color
+	SetColor(c Color)
 	String() string
 }

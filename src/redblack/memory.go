@@ -27,7 +27,7 @@ func (h *memoryNode) IsRed() bool {
 	if h == nil {
 		return false
 	}
-	return h.color == RED
+	return h.Color() == RED
 }
 
 func (h *memoryNode) Left() Node {
@@ -45,9 +45,17 @@ func (h *memoryNode) Right() Node {
 }
 
 func (h *memoryNode) FlipColors() {
-	h.color = !h.color
-	h.left.color = !h.left.color
-	h.right.color = !h.right.color
+	h.SetColor(!h.Color())
+	h.left.SetColor(!h.left.Color())
+	h.right.SetColor(!h.right.Color())
+}
+
+func (h *memoryNode) Color() Color {
+	return h.color
+}
+
+func (h *memoryNode) SetColor(c Color) {
+	h.color = c
 }
 
 func (h *memoryNode) String() string {
@@ -63,7 +71,7 @@ func (h *memoryNode) String() string {
 		rightKey = nil
 	}
 	return fmt.Sprintf("key=%v,left={%v},right={%v},color=%v,value=%v",
-		h.key, leftKey, rightKey, h.color, h.value)
+		h.key, leftKey, rightKey, h.Color(), h.value)
 }
 
 // LLRB implementation
@@ -91,17 +99,17 @@ func (tree *memoryLLRB) Search(key Key) Value {
 
 func (tree *memoryLLRB) Insert(key Key, value Value) {
 	tree.root = tree.insert(tree.root, key, value)
-	tree.root.color = BLACK
+	tree.root.SetColor(BLACK)
 }
 
 func (tree *memoryLLRB) Delete(key Key) {
 	tree.root = tree.delete(tree.root, key)
-	tree.root.color = BLACK
+	tree.root.SetColor(BLACK)
 }
 
 func (tree *memoryLLRB) DeleteMin() {
 	tree.root = tree.deleteMin(tree.root)
-	tree.root.color = BLACK
+	tree.root.SetColor(BLACK)
 }
 
 func (tree *memoryLLRB) Size() int {
@@ -129,7 +137,7 @@ func (tree *memoryLLRB) String() string {
 			rix = nix + 2
 		}
 		s := fmt.Sprintf("#%v: key=%v,color=%v,left=#%v,right=#%v,value=%v\n",
-			nix, h.key, h.color, lix, rix, h.value)
+			nix, h.key, h.Color(), lix, rix, h.value)
 		s += visit(h.left, lix)
 		s += visit(h.right, rix)
 		return s
@@ -168,8 +176,8 @@ func (tree *memoryLLRB) rotateLeft(h *memoryNode) *memoryNode {
 	x := h.right
 	h.right = x.left
 	x.left = h
-	x.color = h.color
-	h.color = RED
+	x.SetColor(h.Color())
+	h.SetColor(RED)
 	return x
 }
 
@@ -177,8 +185,8 @@ func (tree *memoryLLRB) rotateRight(h *memoryNode) *memoryNode {
 	x := h.left
 	h.left = x.right
 	x.right = h
-	x.color = h.color
-	h.color = RED
+	x.SetColor(h.Color())
+	h.SetColor(RED)
 	return x
 }
 
