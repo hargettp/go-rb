@@ -3,6 +3,14 @@ package redblack
 import "fmt"
 import "strings"
 
+import l4g "code.google.com/p/log4go"
+
+var trace l4g.Logger
+
+func init() {
+	trace = l4g.NewDefaultLogger(l4g.INFO)
+}
+
 const (
 	RED   = Color(true)
 	BLACK = Color(false)
@@ -50,14 +58,18 @@ type LLRB interface {
 	*/
 	Delete(key Key)
 	/*
-		Delete from the tree the value with the minimum key
-	*/
-	DeleteMin()
-	/*
 		Return the number of keys in the tree
 	*/
 	Size() int
 	String() string
+
+	// Internal methods
+
+	rotateLeft(h Node) Node
+	rotateRight(h Node) Node
+	moveRedLeft(h Node) Node
+	moveRedRight(h Node) Node
+	fixUp(h Node) Node
 }
 
 /*
@@ -100,17 +112,19 @@ func (tree *llrb) NewNode(key Key, value Value) Node {
 }
 
 func (tree *llrb) Search(key Key) Value {
-	x := tree.Root()
+	return tree.search(tree.Root(), key)
+}
+
+func (tree *llrb) search(h Node, key Key) Value {
 	// NOTE this is a check for the sentinel
-	for x != nil {
-		// cmp := key.CompareTo(x.key)
-		cmp := key.Compare(x.Key())
+	for h != nil {
+		cmp := key.Compare(h.Key())
 		if cmp == 0 {
-			return x.Value()
+			return h.Value()
 		} else if cmp < 0 {
-			x = x.Left()
+			h = h.Left()
 		} else if cmp > 0 {
-			x = x.Right()
+			h = h.Right()
 		}
 	}
 	return nil
@@ -123,12 +137,9 @@ func (tree *llrb) Insert(key Key, value Value) {
 
 func (tree *llrb) Delete(key Key) {
 	tree.SetRoot(tree.delete(tree.Root(), key))
-	tree.Root().SetColor(BLACK)
-}
-
-func (tree *llrb) DeleteMin() {
-	tree.SetRoot(tree.deleteMin(tree.Root()))
-	tree.Root().SetColor(BLACK)
+	if tree.Root() != nil {
+		tree.Root().SetColor(BLACK)
+	}
 }
 
 func (tree *llrb) Size() int {
@@ -163,7 +174,7 @@ func (tree *llrb) insert(h Node, key Key, value Value) Node {
 	if h == nil {
 		return tree.NewNode(key, value)
 	}
-	if h.Left() != nil && h.Left().isRed() && h.Right() != nil && h.Right().isRed() {
+	if isRed(h.Left()) && isRed(h.Right()) {
 		h.flipColors()
 	}
 	cmp := key.Compare(h.Key())
@@ -174,76 +185,118 @@ func (tree *llrb) insert(h Node, key Key, value Value) Node {
 	} else if cmp > 0 {
 		h.SetRight(tree.insert(h.Right(), key, value))
 	}
-	if h.Right() != nil && h.Right().isRed() && (h.Left() == nil || !h.Left().isRed()) {
+	if isRed(h.Right()) {
 		h = tree.rotateLeft(h)
 	}
-	if h.Left() != nil && h.Left().isRed() && h.Left().Left() != nil && h.Left().Left().isRed() {
+	if isRed(h.Left()) && isRed(h.Left().Left()) {
 		h = tree.rotateRight(h)
 	}
 	return h
 }
 
+func (tree *llrb) delete(h Node, key Key) Node {
+	if h == nil {
+		return h
+	}
+	trace.Trace("Deleting %v from \n%v", key, h)
+	if key.Compare(h.Key()) < 0 {
+		if !isRed(h.Left()) && !isRed(h.Left().Left()) {
+			h = tree.moveRedLeft(h)
+		}
+		h.SetLeft(tree.delete(h.Left(), key))
+	} else {
+		if isRed(h.Left()) {
+			h = tree.rotateRight(h)
+		}
+		if key.Compare(h.Key()) == 0 && h.Right() == nil {
+			return nil
+		}
+		if !isRed(h.Right()) && h.Right() != nil && !isRed(h.Right().Left()) {
+			h = tree.moveRedRight(h)
+		}
+		if key.Compare(h.Key()) == 0 {
+			minRight := h.Right().min()
+			h.SetValue(tree.search(h.Right(), minRight))
+			h.SetKey(minRight)
+			h.SetRight(tree.deleteMin(h.Right()))
+		} else {
+			h.SetRight(tree.delete(h.Right(), key))
+		}
+	}
+	return tree.fixUp(h)
+}
+
+func (tree *llrb) deleteMin(h Node) Node {
+	trace.Trace("Before deleting min from %v\n%v", h, tree)
+	if h.Left() == nil {
+		return nil
+	}
+	if !isRed(h.Left()) && !isRed(h.Left().Left()) {
+		h = tree.moveRedLeft(h)
+	}
+	h.SetLeft(tree.deleteMin(h.Left()))
+	trace.Trace("After deleting min from %v\n%v", h, tree)
+	return tree.fixUp(h)
+}
+
 func (tree *llrb) rotateLeft(h Node) Node {
+	trace.Trace("Before rotate left of %v\n%v", h, tree)
 	x := h.Right()
 	h.SetRight(x.Left())
 	x.SetLeft(h)
 	x.SetColor(h.Color())
 	h.SetColor(RED)
+	trace.Trace("After rotate left of %v\n%v", x, tree)
 	return x
 }
 
 func (tree *llrb) rotateRight(h Node) Node {
+	trace.Trace("Before rotate right of %v\n%v", h, tree)
 	x := h.Left()
 	h.SetLeft(x.Right())
 	x.SetRight(h)
 	x.SetColor(h.Color())
 	h.SetColor(RED)
+	trace.Trace("After rotate right of %v\n%v", x, tree)
 	return x
 }
 
-func (tree *llrb) delete(h Node, key Key) Node {
-	return nil
-}
-
 func (tree *llrb) moveRedLeft(h Node) Node {
+	trace.Trace("Before move red left of %v\n%v", h, tree)
 	h.flipColors()
-	if h.Right().Left().isRed() {
+	if isRed(h.Right().Left()) {
 		h.SetRight(tree.rotateRight(h.Right()))
 		h = tree.rotateLeft(h)
 		h.flipColors()
 	}
+	trace.Trace("After move red left of %v\n%v", h, tree)
 	return h
 }
 
 func (tree *llrb) moveRedRight(h Node) Node {
+	trace.Trace("Before move red right of %v\n%v", h, tree)
 	h.flipColors()
-	if h.Left().Left().isRed() {
+	if isRed(h.Left().Left()) {
 		h = tree.rotateRight(h)
 		h.flipColors()
 	}
+	trace.Trace("After move red right of %v\n%v", h, tree)
 	return h
 }
 
 func (tree *llrb) fixUp(h Node) Node {
-	if h.Right().isRed() && !h.Left().isRed() {
+	trace.Trace("Before fix up of %v\n%v", h, tree)
+	if isRed(h.Right()) {
 		h = tree.rotateLeft(h)
 	}
-	if h.Left().isRed() && h.Left().Left().isRed() {
+	if isRed(h.Left()) && isRed(h.Left().Left()) {
 		h = tree.rotateRight(h)
 	}
+	if isRed(h.Left()) && isRed(h.Right()) {
+		h.flipColors()
+	}
+	trace.Trace("After fix up of %v\n%v", h, tree)
 	return h
-}
-
-func (tree *llrb) deleteMin(h Node) Node {
-	// NOTE this is a check for the sentinel
-	if h.Left() == nil {
-		return nil
-	}
-	if !h.Left().isRed() && !h.Left().Left().isRed() {
-		h = tree.moveRedLeft(h)
-	}
-	h.SetLeft(tree.deleteMin(h.Left()))
-	return tree.fixUp(h)
 }
 
 //=============================================================================
@@ -321,12 +374,14 @@ Generalized interface for red-black tree nodes
 type Node interface {
 	NodeImpl
 	flipColors()
-	isRed() bool
+	min() Key
+	max() Key
 	String() string
 }
 
 type NodeImpl interface {
 	Key() Key
+	SetKey(key Key)
 	Value() Value
 	SetValue(value Value)
 	Left() Node
@@ -341,7 +396,7 @@ type node struct {
 	NodeImpl
 }
 
-func (h *node) isRed() bool {
+func isRed(h Node) bool {
 	if h == nil {
 		return false
 	}
@@ -352,6 +407,20 @@ func (h *node) flipColors() {
 	h.SetColor(!h.Color())
 	h.Left().SetColor(!h.Left().Color())
 	h.Right().SetColor(!h.Right().Color())
+}
+
+func (h *node) min() Key {
+	if h.Left() != nil {
+		return h.Left().min()
+	}
+	return h.Key()
+}
+
+func (h *node) max() Key {
+	if h.Right() != nil {
+		return h.Right().max()
+	}
+	return h.Key()
 }
 
 func (h *node) String() string {

@@ -5,7 +5,11 @@ import "testing"
 
 import l4g "code.google.com/p/log4go"
 
-var log = l4g.NewDefaultLogger(l4g.INFO)
+var log l4g.Logger
+
+func init() {
+	log = l4g.NewDefaultLogger(l4g.INFO)
+}
 
 func TestEmptyTree(t *testing.T) {
 	tree := NewMemoryLLRB()
@@ -90,9 +94,149 @@ func TestLotsOfKeys(t *testing.T) {
 	}
 }
 
+func Test1DeleteEmptyTree(t *testing.T) {
+	tree := NewMemoryLLRB()
+	tree.Delete(IntKey(1))
+}
+
+func Test1DeleteSingleKeyTree(t *testing.T) {
+	tree := NewMemoryLLRB()
+	tree.Insert(IntKey(1), StringValue("one"))
+	tree.Delete(IntKey(1))
+	if !checkDelete(tree, IntKey(1)) {
+		t.Fail()
+	}
+}
+
+func Test1DeleteDoubleKeyTree(t *testing.T) {
+	{
+		// delete the min
+		tree := NewMemoryLLRB()
+		tree.Insert(IntKey(1), StringValue("one"))
+		tree.Insert(IntKey(2), StringValue("two"))
+		if !checkDelete(tree, IntKey(1)) {
+			t.Fail()
+		}
+	}
+	{
+		// delete the max
+		tree := NewMemoryLLRB()
+		tree.Insert(IntKey(1), StringValue("one"))
+		tree.Insert(IntKey(2), StringValue("two"))
+		if !checkDelete(tree, IntKey(2)) {
+			t.Fail()
+		}
+	}
+}
+
+func Test1DeleteMultipleKeyTree(t *testing.T) {
+	genTree := func() LLRB {
+		tree := NewMemoryLLRB()
+		tree.Insert(IntKey(1), StringValue("one"))
+		tree.Insert(IntKey(2), StringValue("two"))
+		tree.Insert(IntKey(3), StringValue("three"))
+		tree.Insert(IntKey(4), StringValue("four"))
+		tree.Insert(IntKey(5), StringValue("five"))
+		tree.Insert(IntKey(6), StringValue("six"))
+		return tree
+	}
+	allOk := true
+	for i := 1; i <= 6; i++ {
+		tree := genTree()
+		ok := checkDelete(tree, IntKey(i))
+		if !ok {
+			log.Error("Failed on deletion of key %v", i)
+		}
+		allOk = allOk && ok
+	}
+	if !allOk {
+		t.Fail()
+	}
+}
+
+func noTest1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
+	lots := 8
+	genTree := func() LLRB {
+		tree := NewMemoryLLRB()
+		for i := 1; i <= lots; i++ {
+			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
+			if !checkInvariants(tree) {
+				log.Error("Failed on of insertion of %v\n%v", i, tree)
+				t.Fail()
+			}
+		}
+		return tree
+	}
+	tree := genTree()
+	log.Info("Original tree \n%v", tree)
+	key := tree.Root().Key()
+	if !checkDelete(tree, key) {
+		log.Error("Failed on deletion of key %v\n%v", key, tree)
+		should := NewMemoryLLRB()
+		for i := 1; i <= lots; i++ {
+			if IntKey(i) != key {
+				should.Insert(IntKey(i), StringValue(IntKey(i).String()))
+			}
+		}
+		log.Info("Should have been \n%v", should)
+		t.Fail()
+		tree.Root().SetLeft(tree.rotateLeft(tree.Root().Left()))
+		log.Info("After rotate root's left left\n%v", tree)
+		tree.SetRoot(tree.rotateRight(tree.Root()))
+		log.Info("After rotate root right\n%v", tree)
+	}
+}
+
+func noTest1DeleteLotsOfKeys(t *testing.T) {
+	lots := 8
+	genTree := func() LLRB {
+		tree := NewMemoryLLRB()
+		for i := 0; i < lots; i++ {
+			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
+		}
+		return tree
+	}
+	allOk := true
+	for i := 1; i <= lots; i++ {
+		tree := genTree()
+		ok := checkDelete(tree, IntKey(i))
+		if !ok {
+			log.Error("Failed on deletion of key %v", i)
+		}
+		allOk = allOk && ok
+	}
+	if !allOk {
+		t.Fail()
+	}
+}
+
+//=============================================================================
 //
 // Utility methods
 //
+//=============================================================================
+
+func checkDelete(tree LLRB, key Key) bool {
+	expectedSize := tree.Size() - 1
+	if expectedSize < 0 {
+		expectedSize = 0
+	}
+	tree.Delete(key)
+	if tree.Search(key) != nil {
+		log.Error("Deleted key still has value in tree")
+		return false
+	}
+	if tree.Size() != expectedSize {
+		log.Error("Deletion did not result in tree of expected size: expected %v, saw %v", expectedSize, tree.Size())
+		return false
+	}
+	if !checkInvariants(tree) {
+		log.Error("Invariant check failed")
+		return false
+	}
+	return true
+}
+
 func checkInvariants(tree LLRB) bool {
 
 	return checkBlackRoot(tree) &&
@@ -108,7 +252,7 @@ func checkBlackRoot(tree LLRB) bool {
 	if tree.Root() == nil {
 		return true
 	}
-	if tree.Root().isRed() {
+	if isRed(tree.Root()) {
 		log.Error("Root is not black")
 		return false
 	}
@@ -138,9 +282,9 @@ func checkAllPathsSameNumberBlack(tree LLRB) bool {
 		for _, n := range path {
 			if n != nil {
 				colors = append(colors, n.Color())
-			}
-			if !n.isRed() {
-				count++
+				if !isRed(n) {
+					count++
+				}
 			}
 		}
 		if blackNodeCount == 0 {
@@ -161,18 +305,17 @@ func checkChildrenOfRedAreBlack(tree LLRB) bool {
 	// check that children of red nodes are black
 	allRedHaveBlackChildren := true
 	visitNodes(tree.Root(), func(h Node) {
-		if h != nil && h.isRed() {
+		if isRed(h) {
 			if h.Left() != nil {
-				allRedHaveBlackChildren = allRedHaveBlackChildren && !h.Left().isRed()
+				allRedHaveBlackChildren = allRedHaveBlackChildren && !isRed(h.Left())
 			}
 			if h.Right() != nil {
-				allRedHaveBlackChildren = allRedHaveBlackChildren && !h.Right().isRed()
+				allRedHaveBlackChildren = allRedHaveBlackChildren && !isRed(h.Right())
 			}
 		}
 	})
 	if !allRedHaveBlackChildren {
-		log.Error("Not all red nodes have all black children")
-		log.Error("%v", tree)
+		log.Error("Not all red nodes have all black children\n%v", tree)
 		return false
 	}
 	return true
@@ -190,7 +333,7 @@ func checkDepth(tree LLRB) bool {
 	}
 	var depth func(h Node, d int) int
 	depth = func(h Node, d int) int {
-		log.Debug("Checking at %v depth of %v", d, h)
+		log.Debug("Checking at depth %v node %v", d, h)
 		leftDepth := d
 		rightDepth := d
 		if h.Left() != nil {
@@ -220,9 +363,9 @@ func checkTwoColors(tree LLRB) bool {
 		switch {
 		case h == nil:
 			sawBlack = true
-		case h.isRed():
+		case isRed(h):
 			sawRed = true
-		case !h.isRed():
+		case !isRed(h):
 			sawBlack = true
 		}
 	})

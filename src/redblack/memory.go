@@ -35,6 +35,10 @@ func (h *memoryNode) Key() Key {
 	return h.key
 }
 
+func (h *memoryNode) SetKey(key Key) {
+	h.key = key
+}
+
 func (h *memoryNode) Value() Value {
 	return h.value
 }
