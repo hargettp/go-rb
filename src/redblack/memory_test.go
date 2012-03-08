@@ -154,8 +154,8 @@ func Test1DeleteMultipleKeyTree(t *testing.T) {
 	}
 }
 
-func noTest1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
-	lots := 8
+func Test1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
+	lots := 50
 	genTree := func() LLRB {
 		tree := NewMemoryLLRB()
 		for i := 1; i <= lots; i++ {
@@ -168,7 +168,7 @@ func noTest1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
 		return tree
 	}
 	tree := genTree()
-	log.Info("Original tree \n%v", tree)
+	log.Trace("Original tree \n%v", tree)
 	key := tree.Root().Key()
 	if !checkDelete(tree, key) {
 		log.Error("Failed on deletion of key %v\n%v", key, tree)
@@ -187,11 +187,11 @@ func noTest1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
 	}
 }
 
-func noTest1DeleteLotsOfKeys(t *testing.T) {
-	lots := 8
+func Test1DeleteLotsOfKeys(t *testing.T) {
+	lots := 50
 	genTree := func() LLRB {
 		tree := NewMemoryLLRB()
-		for i := 0; i < lots; i++ {
+		for i := 1; i <= lots; i++ {
 			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
 		}
 		return tree
@@ -210,6 +210,19 @@ func noTest1DeleteLotsOfKeys(t *testing.T) {
 	}
 }
 
+func noTestPrint(t *testing.T) {
+	lots := 31
+	genTree := func() LLRB {
+		tree := NewMemoryLLRB()
+		for i := 1; i <= lots; i++ {
+			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
+		}
+		return tree
+	}
+	tree := genTree()
+	log.Info("Printable tree is \n%v", tree)
+}
+
 //=============================================================================
 //
 // Utility methods
@@ -221,7 +234,9 @@ func checkDelete(tree LLRB, key Key) bool {
 	if expectedSize < 0 {
 		expectedSize = 0
 	}
+	log.Trace("Before deletion\n%v", tree)
 	tree.Delete(key)
+	log.Trace("After deletion\n%v", tree)
 	if tree.Search(key) != nil {
 		log.Error("Deleted key still has value in tree")
 		return false
@@ -238,7 +253,6 @@ func checkDelete(tree LLRB, key Key) bool {
 }
 
 func checkInvariants(tree LLRB) bool {
-
 	return checkBlackRoot(tree) &&
 		checkAllLeavesBlack(tree) &&
 		checkAllPathsSameNumberBlack(tree) &&

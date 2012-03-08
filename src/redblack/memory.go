@@ -36,6 +36,7 @@ func (h *memoryNode) Key() Key {
 }
 
 func (h *memoryNode) SetKey(key Key) {
+	trace.Trace("Setting key of %v to %v", h.key, key)
 	h.key = key
 }
 
@@ -77,5 +78,6 @@ func (h *memoryNode) Color() Color {
 }
 
 func (h *memoryNode) SetColor(c Color) {
+	trace.Trace("Setting color of {%v} to %v",h.Key(),c)
 	h.color = c
 }

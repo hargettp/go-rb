@@ -8,7 +8,7 @@ import l4g "code.google.com/p/log4go"
 var trace l4g.Logger
 
 func init() {
-	trace = l4g.NewDefaultLogger(l4g.INFO)
+	trace = l4g.NewDefaultLogger(l4g.ERROR)
 }
 
 const (
@@ -116,7 +116,6 @@ func (tree *llrb) Search(key Key) Value {
 }
 
 func (tree *llrb) search(h Node, key Key) Value {
-	// NOTE this is a check for the sentinel
 	for h != nil {
 		cmp := key.Compare(h.Key())
 		if cmp == 0 {
@@ -136,7 +135,10 @@ func (tree *llrb) Insert(key Key, value Value) {
 }
 
 func (tree *llrb) Delete(key Key) {
-	tree.SetRoot(tree.delete(tree.Root(), key))
+	newRoot := tree.delete(tree.Root(), key)
+	trace.Trace("Before set root to %v\n%v", newRoot, tree)
+	tree.SetRoot(newRoot)
+	trace.Trace("After set root to %v\n%v", newRoot, tree)
 	if tree.Root() != nil {
 		tree.Root().SetColor(BLACK)
 	}
@@ -154,17 +156,7 @@ func (tree *llrb) Size() int {
 }
 
 func (tree *llrb) String() string {
-	var visit func(h Node, depth int) string
-	visit = func(h Node, depth int) string {
-		if h == nil {
-			return ""
-		}
-		s := fmt.Sprintf("%v%v\n", strings.Repeat("\t", depth), h)
-		s += visit(h.Left(), depth+1)
-		s += visit(h.Right(), depth+1)
-		return s
-	}
-	return visit(tree.Root(), 0)
+	return tree.Root().String()
 }
 
 // LLRB implementation
@@ -195,35 +187,50 @@ func (tree *llrb) insert(h Node, key Key, value Value) Node {
 }
 
 func (tree *llrb) delete(h Node, key Key) Node {
+	trace.Trace("Deleting %v from \n%v", key, tree)
 	if h == nil {
-		return h
+		return nil
 	}
-	trace.Trace("Deleting %v from \n%v", key, h)
 	if key.Compare(h.Key()) < 0 {
+		trace.Trace("Key %v < {%v}", key, h.Key())
 		if !isRed(h.Left()) && !isRed(h.Left().Left()) {
 			h = tree.moveRedLeft(h)
 		}
+		trace.Trace("h is %v", h)
 		h.SetLeft(tree.delete(h.Left(), key))
 	} else {
-		if isRed(h.Left()) {
+		trace.Trace("h is %v", h)
+		// NOTE this is a deviation here, because the 2nd condition is
+		// not in the LLRB paper; the rationale is that we only
+		// want to rotate right if there is 1 black child, but not
+		// two (e.g., only if a 3-node, not a 4-node)
+		if isRed(h.Left()) && !isRed(h.Right()) {
 			h = tree.rotateRight(h)
 		}
+		trace.Trace("h is %v", h)
 		if key.Compare(h.Key()) == 0 && h.Right() == nil {
 			return nil
 		}
+		trace.Trace("h is %v", h)
 		if !isRed(h.Right()) && h.Right() != nil && !isRed(h.Right().Left()) {
 			h = tree.moveRedRight(h)
 		}
+		trace.Trace("h is %v", h)
 		if key.Compare(h.Key()) == 0 {
+			trace.Trace("Key %v == {%v}", key, h.Key())
 			minRight := h.Right().min()
 			h.SetValue(tree.search(h.Right(), minRight))
 			h.SetKey(minRight)
 			h.SetRight(tree.deleteMin(h.Right()))
+			trace.Trace("After deleting key %v, node is %v and tree is\n%v", key, h, tree)
 		} else {
 			h.SetRight(tree.delete(h.Right(), key))
+			trace.Trace("After deleting from right key %v, node is %v and tree is\n%v", key, h, tree)
 		}
 	}
-	return tree.fixUp(h)
+	h = tree.fixUp(h)
+	trace.Trace("Returning from delete %v", h)
+	return h
 }
 
 func (tree *llrb) deleteMin(h Node) Node {
@@ -246,7 +253,7 @@ func (tree *llrb) rotateLeft(h Node) Node {
 	x.SetLeft(h)
 	x.SetColor(h.Color())
 	h.SetColor(RED)
-	trace.Trace("After rotate left of %v\n%v", x, tree)
+	trace.Trace("After rotate left of %v, returning {%v}\n%v", h, x.Key(), tree)
 	return x
 }
 
@@ -257,7 +264,7 @@ func (tree *llrb) rotateRight(h Node) Node {
 	x.SetRight(h)
 	x.SetColor(h.Color())
 	h.SetColor(RED)
-	trace.Trace("After rotate right of %v\n%v", x, tree)
+	trace.Trace("After rotate right of %v, returning {%v}\n%v", h, x.Key(), tree)
 	return x
 }
 
@@ -286,7 +293,7 @@ func (tree *llrb) moveRedRight(h Node) Node {
 
 func (tree *llrb) fixUp(h Node) Node {
 	trace.Trace("Before fix up of %v\n%v", h, tree)
-	if isRed(h.Right()) {
+	if isRed(h.Right()) && !isRed(h.Left()) {
 		h = tree.rotateLeft(h)
 	}
 	if isRed(h.Left()) && isRed(h.Left().Left()) {
@@ -423,18 +430,34 @@ func (h *node) max() Key {
 	return h.Key()
 }
 
-func (h *node) String() string {
-	var leftKey, rightKey Key
-	if h.Left() != nil {
-		leftKey = h.Left().Key()
-	} else {
-		leftKey = nil
+func (n *node) String() string {
+	nodeString := func(h Node) string {
+		var leftKey, rightKey Key
+		if h.Left() != nil {
+			leftKey = h.Left().Key()
+		} else {
+			leftKey = nil
+		}
+		if h.Right() != nil {
+			rightKey = h.Right().Key()
+		} else {
+			rightKey = nil
+		}
+		return fmt.Sprintf("key=%v,left={%v},right={%v},color=%v,value=%v",
+			h.Key(), leftKey, rightKey, h.Color(), h.Value())
+
 	}
-	if h.Right() != nil {
-		rightKey = h.Right().Key()
-	} else {
-		rightKey = nil
+
+	var visit func(h Node, depth int) string
+	visit = func(h Node, depth int) string {
+		if h == nil {
+			return ""
+		}
+		s := fmt.Sprintf("%v%v\n", strings.Repeat("\t", depth), nodeString(h))
+		s += visit(h.Left(), depth+1)
+		s += visit(h.Right(), depth+1)
+		return s
 	}
-	return fmt.Sprintf("key=%v,left={%v},right={%v},color=%v,value=%v",
-		h.Key(), leftKey, rightKey, h.Color(), h.Value())
+	return visit(n, 0)
+
 }
