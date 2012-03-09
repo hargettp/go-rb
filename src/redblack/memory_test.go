@@ -210,7 +210,67 @@ func Test1DeleteLotsOfKeys(t *testing.T) {
 	}
 }
 
-func noTestPrint(t *testing.T) {
+func TestRepeatDeletes(t *testing.T) {
+	lots := 3
+	genTree := func() LLRB {
+		tree := NewMemoryLLRB()
+		for i := 1; i <= lots; i++ {
+			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
+		}
+		return tree
+	}
+	allOk := true
+	for i := 1; i <= lots; i++ {
+		tree := genTree()
+		ok := checkDelete(tree, IntKey(i))
+		if !ok {
+			log.Error("Failed on deletion of key %v", i)
+		} else {
+			expectedSize := tree.Size()
+			tree.Delete(IntKey(i))
+			ok = (tree.Size() == expectedSize)
+			if !ok {
+				log.Error("Failed to stop deletion of key again: expected %v saw %v", expectedSize, tree.Size())
+			}
+		}
+		allOk = allOk && ok
+	}
+	if !allOk {
+		t.Fail()
+	}
+
+}
+
+func Test1Delete1InsertLotsOfKeys(t *testing.T) {
+	lots := 50
+	genTree := func() LLRB {
+		tree := NewMemoryLLRB()
+		for i := 1; i <= lots; i++ {
+			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
+		}
+		return tree
+	}
+	allOk := true
+	for i := 1; i <= lots; i++ {
+		tree := genTree()
+		ok := checkDelete(tree, IntKey(i))
+		if !ok {
+			log.Error("Failed on deletion of key %v", i)
+		} else {
+			ok = checkInsert(tree, IntKey(i), StringValue(string(i)))
+			if !ok {
+				log.Error("Failed on insertion of key %v, value %v", i)
+			}
+		}
+		allOk = allOk && ok
+	}
+	if !allOk {
+		t.Fail()
+	}
+
+}
+
+func TestPrint(t *testing.T) {
 	lots := 31
 	genTree := func() LLRB {
 		tree := NewMemoryLLRB()
@@ -243,6 +303,26 @@ func checkDelete(tree LLRB, key Key) bool {
 	}
 	if tree.Size() != expectedSize {
 		log.Error("Deletion did not result in tree of expected size: expected %v, saw %v", expectedSize, tree.Size())
+		return false
+	}
+	if !checkInvariants(tree) {
+		log.Error("Invariant check failed")
+		return false
+	}
+	return true
+}
+
+func checkInsert(tree LLRB, key Key, value Value) bool {
+	expectedSize := tree.Size() + 1
+	log.Trace("Before insertion\n%v", tree)
+	tree.Insert(key, value)
+	log.Trace("After insertion\n%v", tree)
+	if tree.Search(key) == nil {
+		log.Error("Inserted key has no value in tree")
+		return false
+	}
+	if tree.Size() != expectedSize {
+		log.Error("Insertion did not result in tree of expected size: expected %v, saw %v", expectedSize, tree.Size())
 		return false
 	}
 	if !checkInvariants(tree) {

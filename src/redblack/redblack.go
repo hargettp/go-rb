@@ -187,13 +187,13 @@ func (tree *llrb) insert(h Node, key Key, value Value) Node {
 }
 
 func (tree *llrb) delete(h Node, key Key) Node {
-	trace.Trace("Deleting %v from \n%v", key, tree)
 	if h == nil {
 		return nil
 	}
+	trace.Trace("Deleting %v from \n%v", key, tree)
 	if key.Compare(h.Key()) < 0 {
 		trace.Trace("Key %v < {%v}", key, h.Key())
-		if !isRed(h.Left()) && !isRed(h.Left().Left()) {
+		if !isRed(h.Left()) && h.Left() != nil && !isRed(h.Left().Left()) {
 			h = tree.moveRedLeft(h)
 		}
 		trace.Trace("h is %v", h)
