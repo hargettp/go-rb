@@ -270,7 +270,7 @@ func Test1Delete1InsertLotsOfKeys(t *testing.T) {
 
 }
 
-func TestPrint(t *testing.T) {
+func dontTestPrint(t *testing.T) {
 	lots := 31
 	genTree := func() LLRB {
 		tree := NewMemoryLLRB()
