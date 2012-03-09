@@ -1,6 +1,6 @@
-This package is an implementation of (http://en.wikipedia.org/wiki/Red-black_tree "red-black trees")
-in (http://golang.org "Go") using the algorithms described in 
-(http://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf "Left-Leaning Red-Black Trees, R. Sedgwick 2008")
+This package is an implementation of [red-black trees](http://en.wikipedia.org/wiki/Red-black_tree "red-black trees")
+in [Go](http://golang.org "Go") using the algorithms described in 
+[Left-Leaning Red-Black Trees, R. Sedgwick 2008](http://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf "Left-Leaning Red-Black Trees, R. Sedgwick 2008")
 
 The implementation is intended to be sufficiently generic that any suitable data types can be used
 for keys or values.  Although it is not currently implemented, the intent is that eventually persistent
