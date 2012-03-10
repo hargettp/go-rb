@@ -12,7 +12,7 @@ func init() {
 }
 
 func TestEmptyTree(t *testing.T) {
-	tree := NewMemoryLLRB()
+	tree := NewLLRB()
 	if tree == nil {
 		log.Error("Empty tree is nil")
 		t.Fail()
@@ -24,7 +24,7 @@ func TestEmptyTree(t *testing.T) {
 }
 
 func TestSingleKeyTree(t *testing.T) {
-	tree := NewMemoryLLRB()
+	tree := NewLLRB()
 	tree.Insert(IntKey(1), StringValue("one"))
 	val := tree.Search(IntKey(1))
 	log.Debug("Single key tree is: %v", tree)
@@ -39,7 +39,7 @@ func TestSingleKeyTree(t *testing.T) {
 }
 
 func TestDoubleKeyTree(t *testing.T) {
-	tree := NewMemoryLLRB()
+	tree := NewLLRB()
 	tree.Insert(IntKey(1), StringValue("one"))
 	tree.Insert(IntKey(2), StringValue("two"))
 	val := tree.Search(IntKey(1))
@@ -60,7 +60,7 @@ func TestDoubleKeyTree(t *testing.T) {
 }
 
 func TestMultipleKeyTree(t *testing.T) {
-	tree := NewMemoryLLRB()
+	tree := NewLLRB()
 	tree.Insert(IntKey(1), StringValue("one"))
 	tree.Insert(IntKey(2), StringValue("two"))
 	tree.Insert(IntKey(3), StringValue("three"))
@@ -84,7 +84,7 @@ func TestMultipleKeyTree(t *testing.T) {
 }
 
 func TestLotsOfKeys(t *testing.T) {
-	tree := NewMemoryLLRB()
+	tree := NewLLRB()
 	for i := 0; i < 75; i++ {
 		tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
 	}
@@ -95,12 +95,12 @@ func TestLotsOfKeys(t *testing.T) {
 }
 
 func Test1DeleteEmptyTree(t *testing.T) {
-	tree := NewMemoryLLRB()
+	tree := NewLLRB()
 	tree.Delete(IntKey(1))
 }
 
 func Test1DeleteSingleKeyTree(t *testing.T) {
-	tree := NewMemoryLLRB()
+	tree := NewLLRB()
 	tree.Insert(IntKey(1), StringValue("one"))
 	tree.Delete(IntKey(1))
 	if !checkDelete(tree, IntKey(1)) {
@@ -111,7 +111,7 @@ func Test1DeleteSingleKeyTree(t *testing.T) {
 func Test1DeleteDoubleKeyTree(t *testing.T) {
 	{
 		// delete the min
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		tree.Insert(IntKey(1), StringValue("one"))
 		tree.Insert(IntKey(2), StringValue("two"))
 		if !checkDelete(tree, IntKey(1)) {
@@ -120,7 +120,7 @@ func Test1DeleteDoubleKeyTree(t *testing.T) {
 	}
 	{
 		// delete the max
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		tree.Insert(IntKey(1), StringValue("one"))
 		tree.Insert(IntKey(2), StringValue("two"))
 		if !checkDelete(tree, IntKey(2)) {
@@ -131,7 +131,7 @@ func Test1DeleteDoubleKeyTree(t *testing.T) {
 
 func Test1DeleteMultipleKeyTree(t *testing.T) {
 	genTree := func() LLRB {
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		tree.Insert(IntKey(1), StringValue("one"))
 		tree.Insert(IntKey(2), StringValue("two"))
 		tree.Insert(IntKey(3), StringValue("three"))
@@ -157,7 +157,7 @@ func Test1DeleteMultipleKeyTree(t *testing.T) {
 func Test1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
 	lots := 50
 	genTree := func() LLRB {
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		for i := 1; i <= lots; i++ {
 			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
 			if !checkInvariants(tree) {
@@ -172,7 +172,7 @@ func Test1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
 	key := tree.Root().Key()
 	if !checkDelete(tree, key) {
 		log.Error("Failed on deletion of key %v\n%v", key, tree)
-		should := NewMemoryLLRB()
+		should := NewLLRB()
 		for i := 1; i <= lots; i++ {
 			if IntKey(i) != key {
 				should.Insert(IntKey(i), StringValue(IntKey(i).String()))
@@ -190,7 +190,7 @@ func Test1DeleteLotsOfKeysDeleteRoot(t *testing.T) {
 func Test1DeleteLotsOfKeys(t *testing.T) {
 	lots := 50
 	genTree := func() LLRB {
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		for i := 1; i <= lots; i++ {
 			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
 		}
@@ -213,7 +213,7 @@ func Test1DeleteLotsOfKeys(t *testing.T) {
 func TestRepeatDeletes(t *testing.T) {
 	lots := 3
 	genTree := func() LLRB {
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		for i := 1; i <= lots; i++ {
 			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
 		}
@@ -244,7 +244,7 @@ func TestRepeatDeletes(t *testing.T) {
 func Test1Delete1InsertLotsOfKeys(t *testing.T) {
 	lots := 50
 	genTree := func() LLRB {
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		for i := 1; i <= lots; i++ {
 			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
 		}
@@ -273,7 +273,7 @@ func Test1Delete1InsertLotsOfKeys(t *testing.T) {
 func dontTestPrint(t *testing.T) {
 	lots := 31
 	genTree := func() LLRB {
-		tree := NewMemoryLLRB()
+		tree := NewLLRB()
 		for i := 1; i <= lots; i++ {
 			tree.Insert(IntKey(i), StringValue(IntKey(i).String()))
 		}

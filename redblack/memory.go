@@ -13,7 +13,7 @@ type memoryNode struct {
 
 // LLRB implementation
 
-func NewMemoryLLRB() LLRB {
+func NewLLRB() LLRB {
 	return NewRedBlackTree(&memoryLLRB{root: nil})
 }
 
@@ -78,6 +78,6 @@ func (h *memoryNode) Color() Color {
 }
 
 func (h *memoryNode) SetColor(c Color) {
-	trace.Trace("Setting color of {%v} to %v",h.Key(),c)
+	trace.Trace("Setting color of {%v} to %v", h.Key(), c)
 	h.color = c
 }
