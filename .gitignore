@@ -7,3 +7,4 @@
 /pkg
 .DS_Store
 *.sublime-workspace
+*.sublime-project
